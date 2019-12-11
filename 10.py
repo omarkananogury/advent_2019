@@ -74,15 +74,17 @@ angles = {(i, j): get_angle(i0, j0, i, j) for i, j in asteroid_positions if (i, 
 i_distances = {(i, j): abs(i-i0) for i, j in asteroid_positions if (i, j) != (i0, j0)}
 queue = deque(pd.DataFrame([angles, i_distances]).T.sort_values([0, 1]).reset_index().values)
 
-def num_distinct_angles(queue):
-    return len(Counter(np.array(list(queue))[:, 1]))
+def contains_other_angles(queue, angle):
+    angles = set(np.array(list(queue))[:, 1])
+    angles.add(angle)
+    return len(angles) > 1
 
 results = []
 previous_angle = -1
 while queue:
     x = queue.popleft()
     (i, j), angle, distance = x
-    if angle == previous_angle and queue and num_distinct_angles(queue) > 1:
+    if angle == previous_angle and queue and contains_other_angles(queue, angle):
         queue.append(x)
         continue
     results.append((i, j))
