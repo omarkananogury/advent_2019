@@ -69,6 +69,20 @@ i0, j0 = max(scores, key=lambda k: scores[k])
 print(scores[i0, j0])
 
 
+# 1 bis (faster)
+# N = len(asteroid_positions)
+# i, j = np.array(asteroid_positions).T
+# cross_i = np.transpose([np.tile(i, N), np.repeat(i, N)])
+# cross_j = np.transpose([np.tile(j, N), np.repeat(j, N)])
+# delta_x = cross_i[:, 0] - cross_i[:, 1]
+# delta_y = cross_j[:, 1] - cross_j[:, 0]
+# angles = np.arctan2(delta_y, delta_x).reshape(N, N)
+# num_unique_angles = [np.unique(row).size for row in angles]
+# best_ind = np.argmax(num_unique_angles)
+# i0, j0 = asteroid_positions[best_ind]
+# print(num_unique_angles[best_ind])
+
+
 # 2
 angles = {(i, j): get_angle(i0, j0, i, j) for i, j in asteroid_positions if (i, j) != (i0, j0)}
 i_distances = {(i, j): abs(i-i0) for i, j in asteroid_positions if (i, j) != (i0, j0)}
