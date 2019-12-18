@@ -154,5 +154,4 @@ while True:
     computer.add_inputs(tilt_joystick)
     if (game == '&').sum() == 0:
         break
-        
 print(score)
