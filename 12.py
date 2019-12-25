@@ -7,63 +7,67 @@ text = """
 
 
 import re
-import itertools as it
+import numba as nb
 import numpy as np
 
 
 class Moon:
-    axes = ('x', 'y', 'z')
     def __init__(self, line):
-        self.x, self.y, self.z = [int(x) for x in re.findall('-?\d+', line)]
-        self.vx, self.vy, self.vz = 0, 0, 0
+        x, y, z = [int(x) for x in re.findall('-?\d+', line)]
+        self.position = [x, y, z]
+        self.velocity = [0, 0, 0]
         
+
+@nb.njit
+def update_axe_for_one_step(positions, velocities, n):
+    for i1 in range(n):
+        for i2 in range(i1, n):
+            delta = np.sign(positions[i1] - positions[i2])
+            velocities[i1] -= delta
+            velocities[i2] += delta
+    for i in range(n):
+        positions[i] += velocities[i]
         
-def get_state(moons, ax):
-    return sum(tuple((getattr(m, ax), getattr(m, 'v' + ax)) for m in moons), ())
+
+@nb.njit
+def update_axe(positions, velocities, steps):
+    n = len(positions)
+    for _ in range(steps):
+        update_axe_for_one_step(positions, velocities, n)
+        
+
+@nb.njit
+def update_axe_until_repetition(positions, velocities):
+    n = len(positions)
+    initial_state = positions + velocities
+    step = 0
+    while True:
+        step += 1
+        update_axe_for_one_step(positions, velocities, n)
+        new_state = positions + velocities
+        if new_state == initial_state:
+            return step
 
 
-# 1        
+# 1
 moons = [Moon(line) for line in text.splitlines()]
-N = 1000
+steps = 1000
 
-for _ in range(N):
-    for m1, m2 in it.combinations(moons, 2):
-        for ax in Moon.axes:
-            delta = np.sign(getattr(m2, ax) - getattr(m1, ax))
-            setattr(m2, 'v' + ax, getattr(m2, 'v' + ax) - delta)
-            setattr(m1, 'v' + ax, getattr(m1, 'v' + ax) + delta)
-    for m in moons:
-        for ax in Moon.axes:
-            setattr(m, ax, getattr(m, ax) + getattr(m, 'v' + ax))
-    
-energy = 0
-for m in moons:
-    pot = sum(abs(getattr(m, ax)) for ax in Moon.axes)
-    kin = sum(abs(getattr(m, 'v' + ax)) for ax in Moon.axes)
-    energy += pot * kin
-print(energy)
+for i in range(3):
+    positions = [m.position[i] for m in moons]
+    velocities = [m.velocity[i] for m in moons]
+    update_axe(positions, velocities, steps)
+    for j, m in enumerate(moons):
+        m.position[i] = positions[j]
+        m.velocity[i] = velocities[j]
+print(sum(sum(abs(x) for x in m.position) * sum(abs(x) for x in m.velocity) for m in moons))
 
 
 # 2
 moons = [Moon(line) for line in text.splitlines()]
 periods = []
-
-for ax in Moon.axes:
-    previous_states = set()
-    i = 0
-    while True:
-        for m1, m2 in it.combinations(moons, 2):
-            delta = np.sign(getattr(m2, ax) - getattr(m1, ax))
-            setattr(m2, 'v' + ax, getattr(m2, 'v' + ax) - delta)
-            setattr(m1, 'v' + ax, getattr(m1, 'v' + ax) + delta)
-        for m in moons:
-            setattr(m, ax, getattr(m, ax) + getattr(m, 'v' + ax))
-        state = get_state(moons, ax)
-        if state in previous_states:
-            break
-        else:
-            previous_states.add(state)
-        i += 1
-    periods.append(i)
-
+for i in range(3):
+    positions = [m.position[i] for m in moons]
+    velocities = [m.velocity[i] for m in moons]
+    periods.append(update_axe_until_repetition(positions, velocities))
 print(np.lcm.reduce(periods))
